@@ -55,6 +55,8 @@ pub enum AuditError {
     IntegrityMarkerMissing = 18,
     /// An audit event sequence violation was detected (Issue #701).
     InvalidEventSequence = 19,
+    /// A delegate address already has a grant with a conflicting scope.
+    ConflictingGrant = 20,
 }
 
 // ---------------------------------------------------------------------------
@@ -584,6 +586,14 @@ impl AuditModule {
             || expiration_ledger > parent.expiration_ledger
         {
             return Err(AuditError::DelegationExceedsParentExpiry);
+        }
+
+        if env
+            .storage()
+            .persistent()
+            .has(&DataKey::AuditorKey(delegate.clone()))
+        {
+            return Err(AuditError::ConflictingGrant);
         }
 
         let key_bytes = Self::derive_key_bytes(&env, &delegate, expiration_ledger);
